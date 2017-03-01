@@ -9,17 +9,12 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <link href="static/ratchet-2.0.2/dist/css/ratchet.css" rel="stylesheet">
     <script src="static/ratchet-2.0.2/dist/js/ratchet.min.js"></script>
+
+    <script src="elm.js"></script>
   </head>
-  <body>
-
-    <header class="bar bar-nav">
-      <h1 class="title">Who are You?</h1>
-    </header>
-
-    <div class="content content-padded">
-      <button class="btn btn-primary btn-block">Her</button>
-      <button class="btn btn-primary btn-block">Him</button>
-      <button class="btn btn-primary btn-block">Guest</button>
-    </div>
+  <body id="elm-app">
+    <script type="text/javascript">
+      Elm.Main.embed(document.getElementById('elm-app'));
+    </script>
   </body>
 </html>

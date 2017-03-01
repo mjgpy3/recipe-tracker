@@ -1,4 +1,5 @@
-import Html exposing (Html, button, div, text)
+import Html exposing (Html, button, div, text, header, h1)
+import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 
 main =
@@ -16,7 +17,11 @@ update msg model =
 
 view model =
   div []
-    [ button [ onClick Decrement ] [ text "-" ]
-    , div [] [ text (toString model) ]
-    , button [ onClick Increment ] [ text "+" ]
+    [ header [class "bar bar-nav"]
+        [h1 [class "title"] [text "Who Are You?"]]
+    , div [class "content content-padded"]
+        [ button [class "btn btn-primary btn-block"] [text "Her"]
+        , button [class "btn btn-primary btn-block"] [text "Him"]
+        , button [class "btn btn-primary btn-block"] [text "Guest"]
+        ]
     ]
