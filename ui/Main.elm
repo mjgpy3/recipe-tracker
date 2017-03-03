@@ -7,7 +7,9 @@ import Json.Encode as Enc
 import Array
 
 main =
-  Html.beginnerProgram { model = NoneYet, view = view, update = update }
+  Html.program { init = (NoneYet, Cmd.none), view = view, update = update, subscriptions = subscriptions }
+
+subscriptions model = Sub.none
 
 type alias ShortName = String
 type Role = Chef | Diner
@@ -41,6 +43,8 @@ type ItemDiscriminator = IngredientItem | StepItem
 type Msg
   = SelectUser User
   | SelectAddRecipe
+  | RecipeAdded (Result Http.Error PostRecipeResponse)
+  | SaveNewRecipe
   | ChangeNewRecipeName String
   | AddEmpty ItemDiscriminator
   | ChangeItem ItemDiscriminator Int String
@@ -87,40 +91,50 @@ postRecipe body =
 
 update msg model =
   case msg of
-    SelectUser user -> Welcome user
+    SelectUser user -> (Welcome user, Cmd.none)
 
     SelectAddRecipe ->
       case currentUser model of
-        Just user -> AddRecipeFor user { name="", ingredients=[], steps=[] }
-        Nothing -> NoneYet
+        Just user -> (AddRecipeFor user { name="", ingredients=[], steps=[] }, Cmd.none)
+        Nothing -> (NoneYet, Cmd.none)
     ChangeNewRecipeName newName ->
       case (newRecipe model, currentUser model) of
-        (Just recipe, Just user) -> AddRecipeFor user { recipe | name=newName }
-        _ -> NoneYet
+        (Just recipe, Just user) -> (AddRecipeFor user { recipe | name=newName }, Cmd.none)
+        _ -> (NoneYet, Cmd.none)
     ChangeItem disc valueIndex newValue ->
       case (newRecipe model, currentUser model) of
         (Just recipe, Just user) ->
           let
             replaceValue = Maybe.map (\(index, value) -> if index == valueIndex then (index, newValue) else (index, value))
           in
-            mapItems disc recipe (List.map replaceValue) |> AddRecipeFor user
-        _ -> NoneYet
+            (mapItems disc recipe (List.map replaceValue) |> AddRecipeFor user, Cmd.none)
+        _ -> (NoneYet, Cmd.none)
     AddEmpty disc ->
       case (newRecipe model, currentUser model) of
         (Just recipe, Just user) ->
           let
             addEmptyToEnd values = values ++ [Just (List.length values+1, "")]
           in
-            mapItems disc recipe addEmptyToEnd |> AddRecipeFor user
-        _ -> NoneYet
+            (mapItems disc recipe addEmptyToEnd |> AddRecipeFor user, Cmd.none)
+        _ -> (NoneYet, Cmd.none)
     RemoveItem disc index ->
       case (newRecipe model, currentUser model) of
         (Just recipe, Just user) ->
           let
             remove (i, v) = if i == index then Nothing else Just (i, v)
           in
-            AddRecipeFor user <| mapItems disc recipe <| List.map (Maybe.andThen remove)
-        _ -> NoneYet
+            (AddRecipeFor user <| mapItems disc recipe <| List.map (Maybe.andThen remove), Cmd.none)
+        _ -> (NoneYet, Cmd.none)
+    RecipeAdded (Err _) ->
+      (model, Cmd.none)
+    RecipeAdded (Ok added) ->
+      case currentUser model of
+        Just user -> (Welcome user, Cmd.none)
+        Nothing -> (NoneYet, Cmd.none)
+    SaveNewRecipe ->
+      case (newRecipe model, currentUser model) of
+        (Just recipe, Just user) -> (model, Http.send (\_ -> SelectAddRecipe) <| postRecipe {recipe=recipe, user=user})
+        _ -> (NoneYet, Cmd.none)
 
 users =
   [ ("Thelma", Chef)
@@ -206,7 +220,7 @@ viewAddRecipe (name, role) recipe =
               ]
           , listEdit "Ingredients" "ex. 2 eggs" IngredientItem recipe.ingredients
           , listEdit "Steps" "ex. mix dry ingredients" StepItem recipe.steps
-          , button [attribute "type" "button", class "btn btn-block"] [text "Save"]
+          , button [attribute "type" "button", class "btn btn-block", onClick SaveNewRecipe] [text "Save"]
           ]
       ]
     ]
