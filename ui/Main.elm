@@ -10,7 +10,11 @@ type Role = Chef | Diner
 
 type alias User = (ShortName, Role)
 
-type alias NewRecipe = { name: String, ingredients: List (Maybe (Int, String)) }
+type alias NewRecipe = {
+  name: String,
+  ingredients: List (Maybe (Int, String)),
+  steps: List (Maybe (Int, String))
+}
 
 type Model
   = NoneYet
@@ -28,13 +32,20 @@ currentUser model =
     Welcome user -> Just user
     NoneYet -> Nothing
 
+type ItemDiscriminator = IngredientItem | StepItem
+
 type Msg
   = SelectUser User
   | SelectAddRecipe
   | ChangeNewRecipeName String
-  | AddEmptyIngredient
-  | ChangeIngredient Int String
-  | RemoveIngredient Int
+  | AddEmpty ItemDiscriminator
+  | ChangeItem ItemDiscriminator Int String
+  | RemoveItem ItemDiscriminator Int
+
+mapItems disc recipe fn =
+  case disc of
+    IngredientItem -> { recipe | ingredients=fn recipe.ingredients }
+    StepItem -> { recipe | steps=fn recipe.steps }
 
 update msg model =
   case msg of
@@ -42,35 +53,35 @@ update msg model =
 
     SelectAddRecipe ->
       case currentUser model of
-        Just user -> AddRecipeFor user { name="", ingredients=[] }
+        Just user -> AddRecipeFor user { name="", ingredients=[], steps=[] }
         Nothing -> NoneYet
     ChangeNewRecipeName newName ->
-     case (newRecipe model, currentUser model) of
+      case (newRecipe model, currentUser model) of
         (Just recipe, Just user) -> AddRecipeFor user { recipe | name=newName }
         _ -> NoneYet
-    ChangeIngredient valueIndex newValue ->
-     case (newRecipe model, currentUser model) of
+    ChangeItem disc valueIndex newValue ->
+      case (newRecipe model, currentUser model) of
         (Just recipe, Just user) ->
           let
             replaceValue = Maybe.map (\(index, value) -> if index == valueIndex then (index, newValue) else (index, value))
           in
-            AddRecipeFor user { recipe | ingredients=List.map replaceValue recipe.ingredients }
+            mapItems disc recipe (List.map replaceValue) |> AddRecipeFor user
         _ -> NoneYet
-    AddEmptyIngredient ->
-     case (newRecipe model, currentUser model) of
+    AddEmpty disc ->
+      case (newRecipe model, currentUser model) of
         (Just recipe, Just user) ->
           let
-            newIngredients = recipe.ingredients ++ [Just (List.length recipe.ingredients+1, "")]
+            addEmptyToEnd values = values ++ [Just (List.length values+1, "")]
           in
-            AddRecipeFor user { recipe | ingredients=newIngredients }
+            mapItems disc recipe addEmptyToEnd |> AddRecipeFor user
         _ -> NoneYet
-    RemoveIngredient index ->
-     case (newRecipe model, currentUser model) of
+    RemoveItem disc index ->
+      case (newRecipe model, currentUser model) of
         (Just recipe, Just user) ->
           let
-            newIngredients = List.map (Maybe.andThen (\(i, v) -> if i == index then Nothing else Just (i, v))) recipe.ingredients
+            remove (i, v) = if i == index then Nothing else Just (i, v)
           in
-            AddRecipeFor user { recipe | ingredients=newIngredients }
+            AddRecipeFor user <| mapItems disc recipe <| List.map (Maybe.andThen remove)
         _ -> NoneYet
 
 users =
@@ -121,19 +132,28 @@ roleActions (name, role) =
       [
       ]
 
-ingredientEdit maybeIngredient =
-  case maybeIngredient of
-    Just (index, ingredient) ->
+listEdit title example discriminator items =
+  let
+    rowEdit item =
+      case item of
+        Just (index, _) ->
+          li [class "table-view-cell"]
+            [
+              input [onInput (ChangeItem discriminator index), attribute "type" "text", attribute "placeholder" example] []
+            , button [attribute "type" "button", onClick (RemoveItem discriminator index), class "btn btn-negative"] [span [class "icon icon-trash"] []]
+            ]
+        Nothing -> text ""
+    addButton =
       li [class "table-view-cell"]
-        [
-          input [onInput (ChangeIngredient index), attribute "type" "text", attribute "placeholder" "ex. 5 eggs"] []
-        , button [attribute "type" "button", onClick (RemoveIngredient index), class "btn btn-negative"] [span [class "icon icon-trash"] []]
-        ]
-    Nothing -> text ""
-
-addButton =
-  li [class "table-view-cell"]
-    [button [attribute "type" "button", class "btn", onClick AddEmptyIngredient] [span [class "icon icon-plus"] []]]
+        [button [attribute "type" "button", class "btn", onClick (AddEmpty discriminator)] [span [class "icon icon-plus"] []]]
+  in
+    div [class "card"]
+      [ ul [class "table-view"]
+          ([ li [class "table-view-cell"]
+              [label [] [text title]]
+          , li [class "table-view-divider"] []
+          ] ++ (List.map rowEdit items) ++ [addButton])
+      ]
 
 viewAddRecipe (name, role) recipe =
   div []
@@ -146,13 +166,8 @@ viewAddRecipe (name, role) recipe =
               , input [onInput ChangeNewRecipeName, attribute "type" "text", attribute "placeholder" "ex. Mom's famous mac'n cheese"] []
               , div [] [text recipe.name]
               ]
-          , div [class "card"]
-              [ ul [class "table-view"]
-                  ([ li [class "table-view-cell"]
-                      [label [] [text "Ingredients"]]
-                  , li [class "table-view-divider"] []
-                  ] ++ (List.map ingredientEdit recipe.ingredients) ++ [addButton])
-              ]
+          , listEdit "Ingredients" "ex. 2 eggs" IngredientItem recipe.ingredients
+          , listEdit "Steps" "ex. mix dry ingredients" StepItem recipe.steps
           , div [] [text (toString recipe)]
           ]
       ]
