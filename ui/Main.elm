@@ -1,6 +1,10 @@
 import Html exposing (Html, button, div, text, header, h1, form, input, label, span, ul, li)
 import Html.Attributes exposing (class, attribute)
 import Html.Events exposing (onClick, onInput)
+import Http
+import Json.Decode as Dec
+import Json.Encode as Enc
+import Array
 
 main =
   Html.beginnerProgram { model = NoneYet, view = view, update = update }
@@ -46,6 +50,40 @@ mapItems disc recipe fn =
   case disc of
     IngredientItem -> { recipe | ingredients=fn recipe.ingredients }
     StepItem -> { recipe | steps=fn recipe.steps }
+
+type alias PostRecipeResponse = {
+  message: String
+}
+
+type alias PostRecipeBody = { user: User, recipe: NewRecipe }
+
+encode body =
+  let
+    encodeItems =
+      List.filterMap (\x -> x) >>
+      List.map Tuple.second >>
+      List.map Enc.string >>
+      Array.fromList >>
+      Enc.array
+  in
+    Enc.object
+      [ ("userName", Enc.string <| Tuple.first body.user)
+      , ("role", Enc.string <| roleText <| Tuple.second body.user)
+      , ("recipe", Enc.object <|
+          [ ("name", Enc.string <| body.recipe.name)
+          , ("ingredients", encodeItems body.recipe.ingredients)
+          , ("steps", encodeItems body.recipe.steps)
+          ])
+      ]
+
+decoder =
+  Dec.string
+    |> Dec.field "message"
+    |> Dec.map (\message -> { message=message })
+
+postRecipe : PostRecipeBody -> Http.Request PostRecipeResponse
+postRecipe body =
+  Http.post "http://localhost/recipe" (Http.jsonBody <| encode body) decoder
 
 update msg model =
   case msg of
@@ -168,7 +206,7 @@ viewAddRecipe (name, role) recipe =
               ]
           , listEdit "Ingredients" "ex. 2 eggs" IngredientItem recipe.ingredients
           , listEdit "Steps" "ex. mix dry ingredients" StepItem recipe.steps
-          , div [] [text (toString recipe)]
+          , button [attribute "type" "button", class "btn btn-block"] [text "Save"]
           ]
       ]
     ]
