@@ -83,7 +83,7 @@ decoder =
 
 postRecipe : PostRecipeBody -> Http.Request PostRecipeResponse
 postRecipe body =
-  Http.post "http://localhost/recipe" (Http.jsonBody <| encode body) decoder
+  Http.post "http://localhost:3000/recipe" (Http.jsonBody <| encode body) decoder
 
 update msg model =
   case (msg, model) of
