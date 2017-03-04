@@ -6,6 +6,7 @@ import Json.Decode as Dec
 import Json.Encode as Enc
 import Array
 import User exposing (..)
+import Fp exposing (..)
 
 main =
   Html.program { init = (NoneYet, Cmd.none), view = view, update = update, subscriptions = subscriptions }
@@ -20,6 +21,7 @@ type alias NewRecipe = {
 
 type Model
   = NoneYet
+  | Construction
   | Welcome User
   | AddRecipeFor User NewRecipe
 
@@ -28,6 +30,7 @@ type ItemDiscriminator = IngredientItem | StepItem
 type Msg
   = SelectUser User
   | SelectAddRecipe
+  | SelectFollowRecipe
   | SaveNewRecipe
   | ChangeNewRecipeName String
   | AddEmpty ItemDiscriminator
@@ -48,7 +51,7 @@ type alias PostRecipeBody = { user: User, recipe: NewRecipe }
 encode body =
   let
     encodeItems =
-      List.filterMap (\x -> x) >>
+      List.filterMap id >>
       List.map Tuple.second >>
       List.map Enc.string >>
       Array.fromList >>
@@ -112,7 +115,7 @@ update msg model =
         (model, Http.send handle <| postRecipe {recipe=recipe, user=user})
 
     v ->
-      (NoneYet, Cmd.none)
+      (Construction, Cmd.none)
 
 view model =
   case model of
@@ -121,6 +124,8 @@ view model =
     Welcome user -> viewWelcome user
 
     AddRecipeFor user recipe -> viewAddRecipe user recipe
+
+    Construction -> viewUnderConstruction
 
 selectUserButton (name, role) = button [class "btn btn-primary btn-block", onClick (SelectUser (name, role))] [text name]
 
@@ -141,15 +146,20 @@ viewWelcome (name, role) =
     ]
 
 roleActions (name, role) =
-  case role of
-    Chef ->
-      [
-        button [class "btn btn-primary btn-block", onClick SelectAddRecipe] [text "Add Recipe"]
-      ]
+  let
+    actionButton (label, action) =
+      button [class "btn btn-primary btn-block", onClick action] [text label]
+  in
+    case role of
+      Chef ->
+        List.map actionButton
+          [ ("Follow Recipe", SelectFollowRecipe)
+          , ("Add Recipe", SelectAddRecipe)
+          ]
 
-    Diner ->
-      [
-      ]
+      Diner ->
+        [
+        ]
 
 listEdit title example discriminator items =
   let
@@ -188,6 +198,23 @@ viewAddRecipe (name, role) recipe =
           , listEdit "Ingredients" "ex. 2 eggs" IngredientItem recipe.ingredients
           , listEdit "Steps" "ex. mix dry ingredients" StepItem recipe.steps
           , button [attribute "type" "button", class "btn btn-block", onClick SaveNewRecipe] [text "Save"]
+          ]
+      ]
+    ]
+
+viewUnderConstruction =
+  div []
+    [ header [class "bar bar-nav"]
+      [h1 [class "title"] [text "Whoops..."]]
+    , div [class "content content-padded"]
+      [
+        div [class "card"]
+          [ ul [class "table-view"]
+              [ li [class "table-view-cell"]
+                  [ span [class "icon icon-info"] []
+                  , text "This page is under construction!"
+                  ]
+              ]
           ]
       ]
     ]
