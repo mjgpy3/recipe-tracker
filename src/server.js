@@ -7,6 +7,7 @@ const R = require('ramda');
 
 const esUrl = 'http://localhost:2113/';
 const streamUrl = streamName => `${esUrl}streams/${streamName}`;
+const projectionStateUrl = projectionName => `${esUrl}projection/${projectionName}/state`;
 
 const produce = (event, stream) =>
   request({
@@ -37,6 +38,28 @@ server.route({
         _ => {
           console.log('Added');
           reply({ message: 'Added' });
+        },
+        err => {
+          console.log('Error:', err);
+          reply({ message: 'An error occured' }).code(500);
+        }
+      );
+    ;
+  }
+});
+
+server.route({
+  method: 'GET',
+  path: '/recipes',
+  handler: (_, reply) => {
+    request({
+      method: 'GET',
+      uri: projectionStateUrl('all-recipe-names'),
+      json: true
+    })
+      .then(
+        response => {
+          reply(response);
         },
         err => {
           console.log('Error:', err);

@@ -1,10 +1,9 @@
-import Html exposing (Html, button, div, text, header, h1, form, input, label, span, ul, li)
+import Html exposing (Html, button, div, text, header, h1, h2, form, input, label, span, ul, li)
 import Html.Attributes exposing (class, attribute)
 import Html.Events exposing (onClick, onInput)
 import Http
 import Json.Decode as Dec
 import Json.Encode as Enc
-import Array
 import User exposing (..)
 import Fp exposing (..)
 
@@ -13,24 +12,29 @@ main =
 
 subscriptions model = Sub.none
 
+type alias RecipeName = String
+
 type alias NewRecipe = {
-  name: String,
+  name: RecipeName,
   ingredients: List (Maybe (Int, String)),
   steps: List (Maybe (Int, String))
 }
 
 type Model
   = NoneYet
-  | Construction
+  | Error String
   | Welcome User
   | AddRecipeFor User NewRecipe
+  | FindRecipeToFollow User (List RecipeName)
 
 type ItemDiscriminator = IngredientItem | StepItem
 
 type Msg
   = SelectUser User
+  | ErrorOccured String
   | SelectAddRecipe
   | SelectFollowRecipe
+  | SelectFollowRecipeFrom User (List RecipeName)
   | SaveNewRecipe
   | ChangeNewRecipeName String
   | AddEmpty ItemDiscriminator
@@ -54,8 +58,7 @@ encode body =
       List.filterMap id >>
       List.map Tuple.second >>
       List.map Enc.string >>
-      Array.fromList >>
-      Enc.array
+      Enc.list
   in
     Enc.object
       [ ("userName", Enc.string <| Tuple.first body.user)
@@ -76,12 +79,31 @@ postRecipe : PostRecipeBody -> Http.Request PostRecipeResponse
 postRecipe body =
   Http.post "http://localhost:3000/recipe" (Http.jsonBody <| encode body) decoder
 
+getRecipeNames : Http.Request (List RecipeName)
+getRecipeNames =
+  Http.get "http://localhost:3000/recipes" (Dec.list Dec.string)
+
 update msg model =
   case (msg, model) of
     (SelectUser user, _) ->
       (Welcome user, Cmd.none)
 
+    (SelectFollowRecipe, Welcome user) ->
+      let
+        handle response =
+          case response of
+            Ok recipeNames -> SelectFollowRecipeFrom user recipeNames
+            Err _ -> ErrorOccured "Sorry! Something broken while I was finding recipes."
+      in
+      (FindRecipeToFollow user [], Http.send handle getRecipeNames)
+
+    (SelectFollowRecipeFrom user recipeNames, _) ->
+      (FindRecipeToFollow user recipeNames, Cmd.none)
+
     (SelectAddRecipe, Welcome user) ->
+      (AddRecipeFor user { name="", ingredients=[], steps=[] }, Cmd.none)
+
+    (SelectAddRecipe, FindRecipeToFollow user _) ->
       (AddRecipeFor user { name="", ingredients=[], steps=[] }, Cmd.none)
 
     (ChangeNewRecipeName newName, AddRecipeFor user recipe) ->
@@ -110,12 +132,15 @@ update msg model =
         handle response =
           case response of
             Ok _ -> SelectUser user
-            Err _ -> SelectUser user
+            Err _ -> ErrorOccured "Could not save recipe"
       in
         (model, Http.send handle <| postRecipe {recipe=recipe, user=user})
 
+    (ErrorOccured message, _) ->
+      (Error message, Cmd.none)
+
     v ->
-      (Construction, Cmd.none)
+      (Error "Something went wrong", Cmd.none)
 
 view model =
   case model of
@@ -123,9 +148,10 @@ view model =
 
     Welcome user -> viewWelcome user
 
+    FindRecipeToFollow user recipes -> viewFindRecipeToFollow user recipes
     AddRecipeFor user recipe -> viewAddRecipe user recipe
 
-    Construction -> viewUnderConstruction
+    Error message -> viewError message
 
 selectUserButton (name, role) = button [class "btn btn-primary btn-block", onClick (SelectUser (name, role))] [text name]
 
@@ -202,7 +228,7 @@ viewAddRecipe (name, role) recipe =
       ]
     ]
 
-viewUnderConstruction =
+viewError message =
   div []
     [ header [class "bar bar-nav"]
       [h1 [class "title"] [text "Whoops..."]]
@@ -212,9 +238,44 @@ viewUnderConstruction =
           [ ul [class "table-view"]
               [ li [class "table-view-cell"]
                   [ span [class "icon icon-info"] []
-                  , text "This page is under construction!"
+                  , text message
                   ]
               ]
+          ]
+      ]
+    ]
+
+-- <li class="table-view-cell">Item 2 <button class="btn btn-primary">Button</button></li>
+
+followRecipeButton recipe =
+  li [class "table-view-cell"]
+    [ text recipe
+    , button [class "btn", attribute "type" "button"] [text "Follow"]
+    ]
+
+recipiesHeading =
+  li [class "table-view-cell"] [h2 [] [text "Recipes"]]
+
+withEmptyMessage rows =
+  case rows of
+    [header] ->
+      header::[
+        li [class "table-view-cell"]
+          [ text "It looks like you don't have any recipes yet!"
+          , button [class "btn btn-primary", onClick SelectAddRecipe] [text "Add One"]
+          ]
+      ]
+    all -> all
+
+viewFindRecipeToFollow user recipes =
+  div []
+    [ header [class "bar bar-nav"]
+      [h1 [class "title"] [text "Find Recipe to Follow"]]
+    , div [class "content content-padded"]
+      [
+        div [class "card"]
+          [ ul [class "table-view"]
+              <| withEmptyMessage <| recipiesHeading::List.map followRecipeButton recipes
           ]
       ]
     ]
