@@ -1,0 +1,15 @@
+{
+  "name": "recipe-tracker-api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Michael Gilliland <mjg.py3@gmail.com> (https://twitter.com/mjgpy3)",
+  "license": "ISC",
+  "dependencies": {
+    "hapi": "^16.1.0",
+    "node-uuid": "^1.4.7"
+  }
+}
