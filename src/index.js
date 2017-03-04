@@ -28,7 +28,7 @@ server.route({
   handler: (request, reply) => {
     const event = {
       eventId: uuid.v4(),
-      eventType: 'add-recipe',
+      eventType: 'RecipeAdded',
       data: request.payload
     };
     console.log(event);
