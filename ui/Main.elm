@@ -5,16 +5,12 @@ import Http
 import Json.Decode as Dec
 import Json.Encode as Enc
 import Array
+import User exposing (..)
 
 main =
   Html.program { init = (NoneYet, Cmd.none), view = view, update = update, subscriptions = subscriptions }
 
 subscriptions model = Sub.none
-
-type alias ShortName = String
-type Role = Chef | Diner
-
-type alias User = (ShortName, Role)
 
 type alias NewRecipe = {
   name: String,
@@ -136,12 +132,6 @@ update msg model =
         (Just recipe, Just user) -> (model, Http.send (\_ -> SelectAddRecipe) <| postRecipe {recipe=recipe, user=user})
         _ -> (NoneYet, Cmd.none)
 
-users =
-  [ ("Thelma", Chef)
-  , ("Jimmy", Diner)
-  , ("Guest", Diner)
-  ]
-
 view model =
   case model of
     NoneYet -> viewSelectUser model
@@ -159,11 +149,6 @@ viewSelectUser model =
     , div [class "content content-padded"]
       (List.map selectUserButton users)
     ]
-
-roleText role =
-  case role of
-    Diner -> "diner"
-    Chef -> "chef"
 
 viewWelcome (name, role) =
   div []
