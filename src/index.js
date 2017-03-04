@@ -3,7 +3,7 @@
 const Hapi = require('hapi');
 
 const server = new Hapi.Server();
-server.connection({ port: 3000, host: 'localhost' });
+server.connection({ port: 3000, host: 'localhost', routes: { cors: true } });
 
 server.route({
   method: 'POST',
@@ -13,7 +13,6 @@ server.route({
     reply({ message: "Nice" });
   }
 });
-
 
 server.register(require('inert'), (err) => {
 
@@ -41,7 +40,6 @@ server.register(require('inert'), (err) => {
 });
 
 server.start((err) => {
-
   if (err) {
     throw err;
   }

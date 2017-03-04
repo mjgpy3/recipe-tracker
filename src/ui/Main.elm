@@ -23,23 +23,11 @@ type Model
   | Welcome User
   | AddRecipeFor User NewRecipe
 
-newRecipe model =
-  case model of
-    AddRecipeFor _ recipe -> Just recipe
-    _ -> Nothing
-
-currentUser model =
-  case model of
-    AddRecipeFor user _ -> Just user
-    Welcome user -> Just user
-    NoneYet -> Nothing
-
 type ItemDiscriminator = IngredientItem | StepItem
 
 type Msg
   = SelectUser User
   | SelectAddRecipe
-  | RecipeAdded (Result Http.Error PostRecipeResponse)
   | SaveNewRecipe
   | ChangeNewRecipeName String
   | AddEmpty ItemDiscriminator
@@ -114,16 +102,17 @@ update msg model =
       in
         (AddRecipeFor user <| mapItems disc recipe <| List.map (Maybe.andThen remove), Cmd.none)
 
-    (RecipeAdded (Err _), AddRecipeFor user recipe) ->
-      (model, Cmd.none)
-
-    (RecipeAdded (Ok added), AddRecipeFor user recipe) ->
-      (Welcome user, Cmd.none)
-
     (SaveNewRecipe, AddRecipeFor user recipe) ->
-      (model, Http.send (\_ -> SelectAddRecipe) <| postRecipe {recipe=recipe, user=user})
+      let
+        handle response =
+          case response of
+            Ok _ -> SelectUser user
+            Err _ -> SelectUser user
+      in
+        (model, Http.send handle <| postRecipe {recipe=recipe, user=user})
 
-    _ -> (NoneYet, Cmd.none)
+    v ->
+      (NoneYet, Cmd.none)
 
 view model =
   case model of
