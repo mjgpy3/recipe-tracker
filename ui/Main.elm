@@ -86,51 +86,44 @@ postRecipe body =
   Http.post "http://localhost/recipe" (Http.jsonBody <| encode body) decoder
 
 update msg model =
-  case msg of
-    SelectUser user -> (Welcome user, Cmd.none)
+  case (msg, model) of
+    (SelectUser user, _) ->
+      (Welcome user, Cmd.none)
 
-    SelectAddRecipe ->
-      case currentUser model of
-        Just user -> (AddRecipeFor user { name="", ingredients=[], steps=[] }, Cmd.none)
-        Nothing -> (NoneYet, Cmd.none)
-    ChangeNewRecipeName newName ->
-      case (newRecipe model, currentUser model) of
-        (Just recipe, Just user) -> (AddRecipeFor user { recipe | name=newName }, Cmd.none)
-        _ -> (NoneYet, Cmd.none)
-    ChangeItem disc valueIndex newValue ->
-      case (newRecipe model, currentUser model) of
-        (Just recipe, Just user) ->
-          let
-            replaceValue = Maybe.map (\(index, value) -> if index == valueIndex then (index, newValue) else (index, value))
-          in
-            (mapItems disc recipe (List.map replaceValue) |> AddRecipeFor user, Cmd.none)
-        _ -> (NoneYet, Cmd.none)
-    AddEmpty disc ->
-      case (newRecipe model, currentUser model) of
-        (Just recipe, Just user) ->
-          let
-            addEmptyToEnd values = values ++ [Just (List.length values+1, "")]
-          in
-            (mapItems disc recipe addEmptyToEnd |> AddRecipeFor user, Cmd.none)
-        _ -> (NoneYet, Cmd.none)
-    RemoveItem disc index ->
-      case (newRecipe model, currentUser model) of
-        (Just recipe, Just user) ->
-          let
-            remove (i, v) = if i == index then Nothing else Just (i, v)
-          in
-            (AddRecipeFor user <| mapItems disc recipe <| List.map (Maybe.andThen remove), Cmd.none)
-        _ -> (NoneYet, Cmd.none)
-    RecipeAdded (Err _) ->
+    (SelectAddRecipe, Welcome user) ->
+      (AddRecipeFor user { name="", ingredients=[], steps=[] }, Cmd.none)
+
+    (ChangeNewRecipeName newName, AddRecipeFor user recipe) ->
+      (AddRecipeFor user { recipe | name=newName }, Cmd.none)
+
+    (ChangeItem disc valueIndex newValue, AddRecipeFor user recipe) ->
+      let
+        replaceValue = Maybe.map (\(index, value) -> if index == valueIndex then (index, newValue) else (index, value))
+      in
+        (mapItems disc recipe (List.map replaceValue) |> AddRecipeFor user, Cmd.none)
+
+    (AddEmpty disc, AddRecipeFor user recipe) ->
+      let
+        addEmptyToEnd values = values ++ [Just (List.length values+1, "")]
+      in
+        (mapItems disc recipe addEmptyToEnd |> AddRecipeFor user, Cmd.none)
+
+    (RemoveItem disc index, AddRecipeFor user recipe) ->
+      let
+        remove (i, v) = if i == index then Nothing else Just (i, v)
+      in
+        (AddRecipeFor user <| mapItems disc recipe <| List.map (Maybe.andThen remove), Cmd.none)
+
+    (RecipeAdded (Err _), AddRecipeFor user recipe) ->
       (model, Cmd.none)
-    RecipeAdded (Ok added) ->
-      case currentUser model of
-        Just user -> (Welcome user, Cmd.none)
-        Nothing -> (NoneYet, Cmd.none)
-    SaveNewRecipe ->
-      case (newRecipe model, currentUser model) of
-        (Just recipe, Just user) -> (model, Http.send (\_ -> SelectAddRecipe) <| postRecipe {recipe=recipe, user=user})
-        _ -> (NoneYet, Cmd.none)
+
+    (RecipeAdded (Ok added), AddRecipeFor user recipe) ->
+      (Welcome user, Cmd.none)
+
+    (SaveNewRecipe, AddRecipeFor user recipe) ->
+      (model, Http.send (\_ -> SelectAddRecipe) <| postRecipe {recipe=recipe, user=user})
+
+    _ -> (NoneYet, Cmd.none)
 
 view model =
   case model of
