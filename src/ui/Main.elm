@@ -7,6 +7,7 @@ import Json.Encode as Enc
 import User exposing (..)
 import Fp exposing (..)
 import Component.SelectUser as SelectUser
+import Component.Welcome as Welcome
 
 main =
   Html.program { init = (NoneYet, Cmd.none), view = view, update = update, subscriptions = subscriptions }
@@ -32,9 +33,8 @@ type ItemDiscriminator = IngredientItem | StepItem
 
 type Msg
   = SelectUserMsg SelectUser.Msg
+  | WelcomeMsg Welcome.Msg
   | ErrorOccured String
-  | SelectAddRecipe
-  | SelectFollowRecipe
   | SelectFollowRecipeFrom User (List RecipeName)
   | SaveNewRecipe
   | ChangeNewRecipeName String
@@ -89,7 +89,7 @@ update msg model =
     (SelectUserMsg (SelectUser.SelectUser user), _) ->
       (Welcome user, Cmd.none)
 
-    (SelectFollowRecipe, Welcome user) ->
+    (WelcomeMsg Welcome.SelectFollowRecipe, Welcome user) ->
       let
         handle response =
           case response of
@@ -101,10 +101,10 @@ update msg model =
     (SelectFollowRecipeFrom user recipeNames, _) ->
       (FindRecipeToFollow user recipeNames, Cmd.none)
 
-    (SelectAddRecipe, Welcome user) ->
+    (WelcomeMsg Welcome.SelectAddRecipe, Welcome user) ->
       (AddRecipeFor user { name="", ingredients=[], steps=[] }, Cmd.none)
 
-    (SelectAddRecipe, FindRecipeToFollow user _) ->
+    (WelcomeMsg Welcome.SelectAddRecipe, FindRecipeToFollow user _) ->
       (AddRecipeFor user { name="", ingredients=[], steps=[] }, Cmd.none)
 
     (ChangeNewRecipeName newName, AddRecipeFor user recipe) ->
@@ -147,36 +147,12 @@ view model =
   case model of
     NoneYet -> Html.map SelectUserMsg SelectUser.view
 
-    Welcome user -> viewWelcome user
+    Welcome user -> Html.map WelcomeMsg <| Welcome.view user
 
     FindRecipeToFollow user recipes -> viewFindRecipeToFollow user recipes
     AddRecipeFor user recipe -> viewAddRecipe user recipe
 
     Error message -> viewError message
-
-viewWelcome (name, role) =
-  div []
-    [ header [class "bar bar-nav"]
-      [h1 [class "title"] [text ("Welcome " ++ roleText role ++ " " ++ name)]]
-    , div [class "content content-padded"]
-      (roleActions (name, role))
-    ]
-
-roleActions (name, role) =
-  let
-    actionButton (label, action) =
-      button [class "btn btn-primary btn-block", onClick action] [text label]
-  in
-    case role of
-      Chef ->
-        List.map actionButton
-          [ ("Follow Recipe", SelectFollowRecipe)
-          , ("Add Recipe", SelectAddRecipe)
-          ]
-
-      Diner ->
-        [
-        ]
 
 listEdit title example discriminator items =
   let
@@ -253,7 +229,7 @@ withEmptyMessage rows =
       header::[
         li [class "table-view-cell"]
           [ text "It looks like you don't have any recipes yet!"
-          , button [class "btn btn-primary", onClick SelectAddRecipe] [text "Add One"]
+          , button [class "btn btn-primary", onClick (WelcomeMsg Welcome.SelectAddRecipe)] [text "Add One"]
           ]
       ]
     all -> all
