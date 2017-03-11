@@ -6,6 +6,7 @@ import Json.Decode as Dec
 import Json.Encode as Enc
 import User exposing (..)
 import Fp exposing (..)
+import Component.SelectUser as SelectUser
 
 main =
   Html.program { init = (NoneYet, Cmd.none), view = view, update = update, subscriptions = subscriptions }
@@ -30,7 +31,7 @@ type Model
 type ItemDiscriminator = IngredientItem | StepItem
 
 type Msg
-  = SelectUser User
+  = SelectUserMsg SelectUser.Msg
   | ErrorOccured String
   | SelectAddRecipe
   | SelectFollowRecipe
@@ -85,7 +86,7 @@ getRecipeNames =
 
 update msg model =
   case (msg, model) of
-    (SelectUser user, _) ->
+    (SelectUserMsg (SelectUser.SelectUser user), _) ->
       (Welcome user, Cmd.none)
 
     (SelectFollowRecipe, Welcome user) ->
@@ -131,7 +132,7 @@ update msg model =
       let
         handle response =
           case response of
-            Ok _ -> SelectUser user
+            Ok _ -> SelectUserMsg (SelectUser.SelectUser user)
             Err _ -> ErrorOccured "Could not save recipe"
       in
         (model, Http.send handle <| postRecipe {recipe=recipe, user=user})
@@ -144,7 +145,7 @@ update msg model =
 
 view model =
   case model of
-    NoneYet -> viewSelectUser model
+    NoneYet -> Html.map SelectUserMsg SelectUser.view
 
     Welcome user -> viewWelcome user
 
@@ -152,16 +153,6 @@ view model =
     AddRecipeFor user recipe -> viewAddRecipe user recipe
 
     Error message -> viewError message
-
-selectUserButton (name, role) = button [class "btn btn-primary btn-block", onClick (SelectUser (name, role))] [text name]
-
-viewSelectUser model =
-  div []
-    [ header [class "bar bar-nav"]
-      [h1 [class "title"] [text "Who Are You?"]]
-    , div [class "content content-padded"]
-      (List.map selectUserButton users)
-    ]
 
 viewWelcome (name, role) =
   div []
