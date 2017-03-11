@@ -93,7 +93,7 @@ update msg model =
         handle response =
           case response of
             Ok recipeNames -> SelectFollowRecipeFrom user recipeNames
-            Err _ -> ErrorOccured "Sorry! Something broken while I was finding recipes."
+            Err _ -> ErrorOccured "Sorry! Something broke while I was finding recipes."
       in
       (FindRecipeToFollow user [], Http.send handle getRecipeNames)
 

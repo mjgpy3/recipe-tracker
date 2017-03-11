@@ -63,7 +63,12 @@ server.route({
         },
         err => {
           console.log('Error:', err);
-          reply({ message: 'An error occured' }).code(500);
+          if (err.statusCode === 404) {
+            reply([]);
+          }
+          else {
+            reply({ message: 'An error occured' }).code(500);
+          }
         }
       );
     ;
