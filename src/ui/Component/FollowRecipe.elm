@@ -127,15 +127,19 @@ listView name disc expanded values =
     div [class "card"]
       [ ul [class "table-view"]
           (
-            case expanded of
-              True ->
+            case (expanded, values) of
+              (_, []) ->
+                [ li [class "table-view-cell"]
+                    [ label [] [text ("Recipe has no " ++ name)] ]
+                ]
+              (True, _) ->
                 ([ li [class "table-view-cell"]
                     [ label [] [text name]
                     , button [class "btn", attribute "type" "button", onClick (Collapse disc)] [span [class "icon icon-down"] []]
                     ]
                 , li [class "table-view-divider"] []
                 ] ++ (List.map rowEdit values))
-              False ->
+              (False, _) ->
                 [ li [class "table-view-cell"]
                     [ label [] [text name]
                     , button [class "btn", attribute "type" "button", onClick (Expand disc)] [span [class "icon icon-right"] []]
