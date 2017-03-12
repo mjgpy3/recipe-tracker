@@ -28,40 +28,31 @@ type Msg
   | FollowRecipeMsg FollowRecipe.Msg
   | ErrorOccured String
 
+disp fModel fCmd =
+  Tuple.mapFirst fModel >> Tuple.mapSecond (Cmd.map fCmd)
+
 update msg model =
   case (msg, model) of
     (SelectUserMsg (SelectUser.SelectUser user), _) ->
       (Welcome user, Cmd.none)
 
     (WelcomeMsg Welcome.SelectFollowRecipe, Welcome user) ->
-      let
-        results = SelectRecipeToFollow.load user
-      in
-        (FindRecipeToFollow <| Tuple.first results, Cmd.map SelectRecipeToFollowMsg <| Tuple.second results)
+      disp FindRecipeToFollow SelectRecipeToFollowMsg <| SelectRecipeToFollow.load user
 
     (SelectRecipeToFollowMsg (SelectRecipeToFollow.FollowRecipeNamed name), _) ->
-      let
-        results = FollowRecipe.load name
-      in
-        (FollowRecipe <| Tuple.first results, Cmd.map FollowRecipeMsg <| Tuple.second results)
+      disp FollowRecipe FollowRecipeMsg <| FollowRecipe.load name
 
     (SelectRecipeToFollowMsg SelectRecipeToFollow.AddRecipe, FindRecipeToFollow (SelectRecipeToFollow.Loaded user _)) ->
       (AddRecipeFor (user, AddRecipe.empty), Cmd.none)
 
     (SelectRecipeToFollowMsg msg, FindRecipeToFollow model) ->
-      let
-        results = SelectRecipeToFollow.update msg model
-      in
-        (FindRecipeToFollow <| Tuple.first results, Cmd.map SelectRecipeToFollowMsg <| Tuple.second results)
+      disp FindRecipeToFollow SelectRecipeToFollowMsg <| SelectRecipeToFollow.update msg model
 
     (AddRecipeMsg AddRecipe.RecipeSaved, AddRecipeFor (user, _)) ->
       (Welcome user, Cmd.none)
 
     (AddRecipeMsg msg, AddRecipeFor model) ->
-      let
-        results = AddRecipe.update msg model
-      in
-        (AddRecipeFor <| Tuple.first results, Cmd.map AddRecipeMsg <| Tuple.second results)
+      disp AddRecipeFor AddRecipeMsg <| AddRecipe.update msg model
 
     (WelcomeMsg Welcome.SelectAddRecipe, Welcome user) ->
       (AddRecipeFor (user, AddRecipe.empty), Cmd.none)
