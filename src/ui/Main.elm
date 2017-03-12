@@ -45,12 +45,12 @@ update msg model =
       disp FollowRecipe FollowRecipeMsg <| FollowRecipe.load user name
 
     (SelectRecipeToFollowMsg SelectRecipeToFollow.AddRecipe, FindRecipeToFollow (SelectRecipeToFollow.Loaded user _)) ->
-      (AddRecipeFor (user, AddRecipe.empty), Cmd.none)
+      (AddRecipeFor (user, AddRecipe.empty, Nothing), Cmd.none)
 
     (SelectRecipeToFollowMsg msg, FindRecipeToFollow model) ->
       disp FindRecipeToFollow SelectRecipeToFollowMsg <| SelectRecipeToFollow.update msg model
 
-    (AddRecipeMsg AddRecipe.RecipeSaved, AddRecipeFor (user, _)) ->
+    (AddRecipeMsg AddRecipe.RecipeSaved, AddRecipeFor (user, _, _)) ->
       (Welcome user, Cmd.none)
 
     (FollowRecipeMsg FollowRecipe.CookTracked, FollowRecipe (FollowRecipe.Following row)) ->
@@ -66,7 +66,7 @@ update msg model =
       disp FollowRecipe FollowRecipeMsg <| FollowRecipe.update msg model
 
     (WelcomeMsg Welcome.SelectAddRecipe, Welcome user) ->
-      (AddRecipeFor (user, AddRecipe.empty), Cmd.none)
+      (AddRecipeFor (user, AddRecipe.empty, Nothing), Cmd.none)
 
     (ErrorOccured message, _) ->
       (Error message, Cmd.none)

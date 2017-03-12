@@ -22,7 +22,7 @@ type Msg
   | ChangeItem ItemDiscriminator Int String
   | RemoveItem ItemDiscriminator Int
   | RecipeSaved
-  | ErrorWhileSaving
+  | ErrorWhileSaving String
 
 type ItemDiscriminator = IngredientItem | StepItem
 
@@ -47,7 +47,7 @@ empty =
     overallTime=Nothing
   }
 
-type alias Model = (User, NewRecipe)
+type alias Model = (User, NewRecipe, Maybe String)
 
 decoder =
   Dec.string
@@ -119,54 +119,74 @@ mapItems disc recipe fn =
     IngredientItem -> { recipe | ingredients=fn recipe.ingredients }
     StepItem -> { recipe | steps=fn recipe.steps }
 
-update msg (user, recipe) =
+handle response =
+  case response of
+    Ok _ -> RecipeSaved
+    Err _ -> ErrorWhileSaving "Failed to save. Please try again later."
+
+update msg (user, recipe, err) =
   case msg of
     ChangeNewRecipeName newName ->
-      ((user, { recipe | name=newName }), Cmd.none)
+      ((user, { recipe | name=newName }, Nothing), Cmd.none)
 
     ChangeServing newServing ->
-      ((user, { recipe | serves=Result.toMaybe (String.toInt newServing) }), Cmd.none)
+      ((user, { recipe | serves=Result.toMaybe (String.toInt newServing) }, Nothing), Cmd.none)
 
     ChangeCookTime newCookTime ->
-      ((user, { recipe | cookTime=Result.toMaybe (String.toInt newCookTime) }), Cmd.none)
+      ((user, { recipe | cookTime=Result.toMaybe (String.toInt newCookTime) }, Nothing), Cmd.none)
 
     ChangePrepTime newPrepTime ->
-      ((user, { recipe | prepTime=Result.toMaybe (String.toInt newPrepTime) }), Cmd.none)
+      ((user, { recipe | prepTime=Result.toMaybe (String.toInt newPrepTime) }, Nothing), Cmd.none)
 
     ChangeOverallTime newOverallTime ->
-      ((user, { recipe | overallTime=Result.toMaybe (String.toInt newOverallTime) }), Cmd.none)
+      ((user, { recipe | overallTime=Result.toMaybe (String.toInt newOverallTime) }, Nothing), Cmd.none)
 
     ChangeItem disc valueIndex newValue ->
       let
         replaceValue = Maybe.map (\(index, value) -> if index == valueIndex then (index, newValue) else (index, value))
       in
-        ((user, mapItems disc recipe (List.map replaceValue)), Cmd.none)
+        ((user, mapItems disc recipe (List.map replaceValue), Nothing), Cmd.none)
 
     AddEmpty disc ->
       let
         addEmptyToEnd values = values ++ [Just (List.length values+1, "")]
       in
-        ((user, mapItems disc recipe addEmptyToEnd), Cmd.none)
+        ((user, mapItems disc recipe addEmptyToEnd, Nothing), Cmd.none)
 
     RemoveItem disc index ->
       let
         remove (i, v) = if i == index then Nothing else Just (i, v)
       in
-        ((user, mapItems disc recipe <| List.map (Maybe.andThen remove)), Cmd.none)
+        ((user, mapItems disc recipe <| List.map (Maybe.andThen remove), Nothing), Cmd.none)
+
+    ErrorWhileSaving message ->
+      ((user, recipe, Just message), Cmd.none)
 
     SaveNewRecipe ->
-      let
-        handle response =
-          case response of
-            Ok _ -> RecipeSaved
-            Err _ -> ErrorWhileSaving
-      in
-        ((user, recipe), Http.send handle <| postRecipe {recipe=recipe, user=user})
+      case recipe.name of
+        "" ->
+          ((user, recipe, Just "A recipe name must be given."), Cmd.none)
+        _ ->
+          ((user, recipe, Nothing), Http.send handle <| postRecipe {recipe=recipe, user=user})
 
     _ ->
-      ((user, recipe), Cmd.none)
+      ((user, recipe, Nothing), Cmd.none)
 
-view ((name, _), recipe) =
+viewError error =
+  case error of
+    Nothing ->
+      text ""
+    Just message ->
+      div [class "card"]
+        [ ul [class "table-view"]
+            [ li [class "table-view-cell"]
+                [ span [class "icon icon-info"] []
+                , text message
+                ]
+            ]
+        ]
+
+view ((name, _), recipe, err) =
   div []
     [ header [class "bar bar-nav"]
       [h1 [class "title"] [text "Add Recipe"]]
@@ -194,6 +214,7 @@ view ((name, _), recipe) =
               ]
           , listEdit "Ingredients" "ex. 2 eggs" IngredientItem recipe.ingredients
           , listEdit "Steps" "ex. mix dry ingredients" StepItem recipe.steps
+          , viewError err
           , button [attribute "type" "button", class "btn btn-block", onClick SaveNewRecipe] [text "Save"]
           ]
       ]
