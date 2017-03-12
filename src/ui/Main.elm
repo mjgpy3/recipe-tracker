@@ -53,8 +53,8 @@ update msg model =
     (AddRecipeMsg AddRecipe.RecipeSaved, AddRecipeFor (user, _)) ->
       (Welcome user, Cmd.none)
 
-    (FollowRecipeMsg FollowRecipe.CookTracked, FollowRecipe (FollowRecipe.Following user _)) ->
-      (Welcome user, Cmd.none)
+    (FollowRecipeMsg FollowRecipe.CookTracked, FollowRecipe (FollowRecipe.Following row)) ->
+      (Welcome row.user, Cmd.none)
 
     (AddRecipeMsg msg, AddRecipeFor model) ->
       disp AddRecipeFor AddRecipeMsg <| AddRecipe.update msg model

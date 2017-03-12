@@ -1,6 +1,6 @@
 module Component.FollowRecipe exposing (Model(..), Msg(..), load, view, update)
 
-import Html exposing (div, text, h1, ul, li, header, label, i, button)
+import Html exposing (div, text, h1, ul, li, header, label, i, button, span)
 import Html.Attributes exposing (class, attribute)
 import Html.Events exposing (onClick)
 import Http
@@ -9,6 +9,8 @@ import Json.Decode as Dec
 import Json.Encode exposing (null)
 import Fp exposing (..)
 import User exposing (..)
+
+type Items = Ingredients | Steps
 
 type alias Recipe = {
   name: String,
@@ -49,7 +51,7 @@ postStartedToFollow recipeName =
 
 type Model
   = Loading User String
-  | Following User Recipe
+  | Following {user: User, recipe: Recipe, ingredientsExpanded: Bool, stepsExpanded: Bool }
 
 type Msg
   = Loaded User Recipe
@@ -57,6 +59,8 @@ type Msg
   | ActionTracked
   | RecipeCooked Recipe
   | CookTracked
+  | Expand Items
+  | Collapse Items
 
 decoder =
   map7
@@ -81,12 +85,29 @@ handleRecipeLoaded user response =
 load user recipeName =
   (Loading user recipeName, Http.send (handleRecipeLoaded user) <| getRecipeNamed recipeName)
 
+init user recipe = 
+  Following {user=user, recipe=recipe, ingredientsExpanded=True, stepsExpanded=True }
+
 update msg model =
-  case msg of
-    Loaded user recipe ->
-      (Following user recipe, Http.send (const ActionTracked) <| postStartedToFollow recipe.name)
-    RecipeCooked recipe ->
+  case (msg, model) of
+    (Loaded user recipe, _) ->
+      (init user recipe, Http.send (const ActionTracked) <| postStartedToFollow recipe.name)
+
+    (RecipeCooked recipe, _) ->
       (model, Http.send (const CookTracked) <| postRecipeCooked recipe.name)
+
+    (Expand Ingredients, Following row) ->
+      (Following { row | ingredientsExpanded=True }, Cmd.none)
+
+    (Collapse Ingredients, Following row) ->
+      (Following { row | ingredientsExpanded=False }, Cmd.none)
+
+    (Expand Steps, Following row) ->
+      (Following { row | stepsExpanded=True }, Cmd.none)
+
+    (Collapse Steps, Following row) ->
+      (Following { row | stepsExpanded=False }, Cmd.none)
+
     _ ->
       (model, Cmd.none)
 
@@ -98,24 +119,35 @@ loadingCell =
     ]
   ]
 
-listView name values =
+listView name disc expanded values =
   let
     rowEdit value =
-      li [class "table-view-cell"]
-        [text value]
+      li [class "table-view-cell"] [ text value ]
   in
     div [class "card"]
       [ ul [class "table-view"]
-          ([ li [class "table-view-cell"]
-              [label [] [text name]]
-          , li [class "table-view-divider"] []
-          ] ++ (List.map rowEdit values))
+          (
+            case expanded of
+              True ->
+                ([ li [class "table-view-cell"]
+                    [ label [] [text name]
+                    , button [class "btn", attribute "type" "button", onClick (Collapse disc)] [span [class "icon icon-down"] []]
+                    ]
+                , li [class "table-view-divider"] []
+                ] ++ (List.map rowEdit values))
+              False ->
+                [ li [class "table-view-cell"]
+                    [ label [] [text name]
+                    , button [class "btn", attribute "type" "button", onClick (Expand disc)] [span [class "icon icon-right"] []]
+                    ]
+                ]
+          )
       ]
 
 getName model =
   case model of
     Loading _ name -> name
-    Following _ recipe -> recipe.name
+    Following row -> row.recipe.name
 
 view model =
   div []
@@ -128,10 +160,10 @@ view model =
       (case model of
         Loading _ _ ->
           loadingCell
-        Following _ recipe ->
-          [ listView "Ingredients" recipe.ingredients
-          , listView "Steps" recipe.steps
-          , button [class "btn btn-positive btn-block", attribute "type" "button", onClick (RecipeCooked recipe)] [text "Cooked It!"]
+        Following row ->
+          [ listView "Ingredients" Ingredients row.ingredientsExpanded row.recipe.ingredients
+          , listView "Steps" Steps row.stepsExpanded row.recipe.steps
+          , button [class "btn btn-positive btn-block", attribute "type" "button", onClick (RecipeCooked row.recipe)] [text "Cooked It!"]
           ]
       )
     ]
