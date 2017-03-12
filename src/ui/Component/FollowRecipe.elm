@@ -80,7 +80,7 @@ getRecipeNamed name =
 handleRecipeLoaded user response =
   case response of
     Ok recipe -> Loaded user recipe
-    Err e -> Debug.log (toString e) ErrorWhileLoading
+    Err _ -> ErrorWhileLoading
 
 load user recipeName =
   (Loading user recipeName, Http.send (handleRecipeLoaded user) <| getRecipeNamed recipeName)
