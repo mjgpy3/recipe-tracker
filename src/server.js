@@ -94,12 +94,62 @@ server.connection({ port: 3000, host: 'localhost', routes: { cors: true } });
 
 server.route({
   method: 'POST',
+  path: '/recipe/{name}/cooked',
+  handler: (req, reply) => {
+    const event = {
+      eventId: uuid.v4(),
+      eventType: 'RecipeCooked',
+      data: {}
+    };
+    console.log(event);
+    produce(event, `Recipe-${req.params.name}`)
+      .then(
+        _ => {
+          console.log('Cooked');
+          reply({ message: 'Cooked' });
+        },
+        err => {
+          console.log('Error:', err);
+          reply({ message: 'An error occured' }).code(500);
+        }
+      );
+    ;
+  }
+});
+
+server.route({
+  method: 'POST',
+  path: '/recipe/{name}/follow',
+  handler: (req, reply) => {
+    const event = {
+      eventId: uuid.v4(),
+      eventType: 'RecipeFollowingStarted',
+      data: {}
+    };
+    console.log(event);
+    produce(event, `Recipe-${req.params.name}`)
+      .then(
+        _ => {
+          console.log('Follow started');
+          reply({ message: 'Follow started' });
+        },
+        err => {
+          console.log('Error:', err);
+          reply({ message: 'An error occured' }).code(500);
+        }
+      );
+    ;
+  }
+});
+
+server.route({
+  method: 'POST',
   path: '/recipe',
-  handler: (request, reply) => {
+  handler: (req, reply) => {
     const event = {
       eventId: uuid.v4(),
       eventType: 'RecipeAdded',
-      data: request.payload
+      data: req.payload
     };
     console.log(event);
     produce(event, `Recipe-${event.data.recipe.name}`)

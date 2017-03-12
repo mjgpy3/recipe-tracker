@@ -1,5 +1,7 @@
 import Html exposing (Html)
 
+import User exposing (..)
+
 import Component.AddRecipe as AddRecipe
 import Component.Error as Error
 import Component.FollowRecipe as FollowRecipe
@@ -39,8 +41,8 @@ update msg model =
     (WelcomeMsg Welcome.SelectFollowRecipe, Welcome user) ->
       disp FindRecipeToFollow SelectRecipeToFollowMsg <| SelectRecipeToFollow.load user
 
-    (SelectRecipeToFollowMsg (SelectRecipeToFollow.FollowRecipeNamed name), _) ->
-      disp FollowRecipe FollowRecipeMsg <| FollowRecipe.load name
+    (SelectRecipeToFollowMsg (SelectRecipeToFollow.FollowRecipeNamed user name), _) ->
+      disp FollowRecipe FollowRecipeMsg <| FollowRecipe.load user name
 
     (SelectRecipeToFollowMsg SelectRecipeToFollow.AddRecipe, FindRecipeToFollow (SelectRecipeToFollow.Loaded user _)) ->
       (AddRecipeFor (user, AddRecipe.empty), Cmd.none)
@@ -49,6 +51,9 @@ update msg model =
       disp FindRecipeToFollow SelectRecipeToFollowMsg <| SelectRecipeToFollow.update msg model
 
     (AddRecipeMsg AddRecipe.RecipeSaved, AddRecipeFor (user, _)) ->
+      (Welcome user, Cmd.none)
+
+    (FollowRecipeMsg FollowRecipe.CookTracked, FollowRecipe (FollowRecipe.Following user _)) ->
       (Welcome user, Cmd.none)
 
     (AddRecipeMsg msg, AddRecipeFor model) ->

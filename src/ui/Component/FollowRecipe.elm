@@ -1,9 +1,14 @@
 module Component.FollowRecipe exposing (Model(..), Msg(..), load, view, update)
 
-import Html exposing (div, text, h1, ul, li, header)
-import Html.Attributes exposing (class)
+import Html exposing (div, text, h1, ul, li, header, label, i, button)
+import Html.Attributes exposing (class, attribute)
+import Html.Events exposing (onClick)
 import Http
 import Json.Decode exposing (field, map7, list, string, maybe, int)
+import Json.Decode as Dec
+import Json.Encode exposing (null)
+import Fp exposing (..)
+import User exposing (..)
 
 type alias Recipe = {
   name: String,
@@ -26,13 +31,32 @@ makeRecipe name ingredients steps serves cookTime prepTime overallTime =
     overallTime=overallTime
   }
 
+any = Dec.map (const ()) (maybe int)
+
+postRecipeCooked : String -> Http.Request ()
+postRecipeCooked recipeName =
+  Http.post
+    ("http://localhost:3000/recipe/" ++ recipeName ++ "/cooked")
+    (Http.jsonBody null)
+    any
+
+postStartedToFollow : String -> Http.Request ()
+postStartedToFollow recipeName =
+  Http.post
+    ("http://localhost:3000/recipe/" ++ recipeName ++ "/follow")
+    (Http.jsonBody null)
+    any
+
 type Model
-  = Loading String
-  | Following Recipe
+  = Loading User String
+  | Following User Recipe
 
 type Msg
-  = Loaded Recipe
+  = Loaded User Recipe
   | ErrorWhileLoading
+  | ActionTracked
+  | RecipeCooked Recipe
+  | CookTracked
 
 decoder =
   map7
@@ -49,37 +73,65 @@ getRecipeNamed : String -> Http.Request Recipe
 getRecipeNamed name =
   Http.get ("http://localhost:3000/recipe/" ++ name) decoder
 
-handle response =
+handleRecipeLoaded user response =
   case response of
-    Ok recipe -> Loaded recipe
+    Ok recipe -> Loaded user recipe
     Err _ -> ErrorWhileLoading
 
-load recipeName =
-  (Loading recipeName, Http.send handle <| getRecipeNamed recipeName)
+load user recipeName =
+  (Loading user recipeName, Http.send (handleRecipeLoaded user) <| getRecipeNamed recipeName)
 
 update msg model =
   case msg of
-    Loaded recipe ->
-      (Following recipe, Cmd.none)
+    Loaded user recipe ->
+      (Following user recipe, Http.send (const ActionTracked) <| postStartedToFollow recipe.name)
+    RecipeCooked recipe ->
+      (model, Http.send (const CookTracked) <| postRecipeCooked recipe.name)
     _ ->
       (model, Cmd.none)
+
+loadingCell = 
+  [ div [class "card"]
+    [ ul [class "table-view"]
+      [ li [class "table-view-cell"] [text "Loading..."]
+      ]
+    ]
+  ]
+
+listView name values =
+  let
+    rowEdit value =
+      li [class "table-view-cell"]
+        [text value]
+  in
+    div [class "card"]
+      [ ul [class "table-view"]
+          ([ li [class "table-view-cell"]
+              [label [] [text name]]
+          , li [class "table-view-divider"] []
+          ] ++ (List.map rowEdit values))
+      ]
+
+getName model =
+  case model of
+    Loading _ name -> name
+    Following _ recipe -> recipe.name
 
 view model =
   div []
     [ header [class "bar bar-nav"]
       [h1 [class "title"]
-        [ case model of
-            Loading name -> text ("Follow " ++ name)
-            Following recipe -> text ("Follow " ++ recipe.name)
+        [ text "Follow ", i [] [ text <| getName model ]
         ]
       ]
     , div [class "content content-padded"]
-      [
-        div [class "card"]
-          [ ul [class "table-view"]
-              (case model of
-                Loading _ -> [li [class "table-view-cell"] [text "Loading..."]]
-                Following recipe -> [text "hi"])
+      (case model of
+        Loading _ _ ->
+          loadingCell
+        Following _ recipe ->
+          [ listView "Ingredients" recipe.ingredients
+          , listView "Steps" recipe.steps
+          , button [class "btn btn-positive btn-block", attribute "type" "button", onClick (RecipeCooked recipe)] [text "Cooked It!"]
           ]
-      ]
+      )
     ]

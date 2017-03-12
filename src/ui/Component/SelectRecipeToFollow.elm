@@ -14,17 +14,17 @@ type Model
 type Msg
   = AddRecipe
   | RecipesLoaded User (List String)
-  | FollowRecipeNamed String
+  | FollowRecipeNamed User String
   | ErrorWhileLoading
 
 getRecipeNames : Http.Request (List String)
 getRecipeNames =
   Http.get "http://localhost:3000/recipes" (Dec.list Dec.string)
 
-followRecipeButton name =
+followRecipeButton user name =
   li [class "table-view-cell"]
     [ text name
-    , button [class "btn", attribute "type" "button", onClick (FollowRecipeNamed name)] [text "Follow"]
+    , button [class "btn", attribute "type" "button", onClick (FollowRecipeNamed user name)] [text "Follow"]
     ]
 
 recipesHeading =
@@ -67,7 +67,7 @@ view model =
           [ ul [class "table-view"]
               (case model of
                 Unloaded -> [li [class "table-view-cell"] [text "Loading"]]
-                Loaded user recipes -> withEmptyMessage <| recipesHeading::List.map followRecipeButton recipes)
+                Loaded user recipes -> withEmptyMessage <| recipesHeading::List.map (followRecipeButton user) recipes)
           ]
       ]
     ]
