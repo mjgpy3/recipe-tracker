@@ -2,6 +2,7 @@ import Html exposing (Html)
 
 import Component.AddRecipe as AddRecipe
 import Component.Error as Error
+import Component.FollowRecipe as FollowRecipe
 import Component.SelectRecipeToFollow as SelectRecipeToFollow
 import Component.SelectUser as SelectUser
 import Component.Welcome as Welcome
@@ -16,6 +17,7 @@ type Model
   | Welcome Welcome.Model
   | AddRecipeFor AddRecipe.Model
   | FindRecipeToFollow SelectRecipeToFollow.Model
+  | FollowRecipe FollowRecipe.Model
   | Error String
 
 type Msg
@@ -23,6 +25,7 @@ type Msg
   | WelcomeMsg Welcome.Msg
   | AddRecipeMsg AddRecipe.Msg
   | SelectRecipeToFollowMsg SelectRecipeToFollow.Msg
+  | FollowRecipeMsg FollowRecipe.Msg
   | ErrorOccured String
 
 update msg model =
@@ -35,6 +38,12 @@ update msg model =
         results = SelectRecipeToFollow.load user
       in
         (FindRecipeToFollow <| Tuple.first results, Cmd.map SelectRecipeToFollowMsg <| Tuple.second results)
+
+    (SelectRecipeToFollowMsg (SelectRecipeToFollow.FollowRecipeNamed name), _) ->
+      let
+        results = FollowRecipe.load name
+      in
+        (FollowRecipe <| Tuple.first results, Cmd.map FollowRecipeMsg <| Tuple.second results)
 
     (SelectRecipeToFollowMsg SelectRecipeToFollow.AddRecipe, FindRecipeToFollow (SelectRecipeToFollow.Loaded user _)) ->
       (AddRecipeFor (user, AddRecipe.empty), Cmd.none)
@@ -71,5 +80,6 @@ view model =
 
     FindRecipeToFollow model -> Html.map SelectRecipeToFollowMsg <| SelectRecipeToFollow.view model
     AddRecipeFor model -> Html.map AddRecipeMsg <| AddRecipe.view model
+    FollowRecipe model -> Html.map FollowRecipeMsg <| FollowRecipe.view model
 
     Error message -> Error.view message

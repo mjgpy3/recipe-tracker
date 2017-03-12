@@ -14,16 +14,17 @@ type Model
 type Msg
   = AddRecipe
   | RecipesLoaded User (List String)
+  | FollowRecipeNamed String
   | ErrorWhileLoading
 
 getRecipeNames : Http.Request (List String)
 getRecipeNames =
   Http.get "http://localhost:3000/recipes" (Dec.list Dec.string)
 
-followRecipeButton recipe =
+followRecipeButton name =
   li [class "table-view-cell"]
-    [ text recipe
-    , button [class "btn", attribute "type" "button"] [text "Follow"]
+    [ text name
+    , button [class "btn", attribute "type" "button", onClick (FollowRecipeNamed name)] [text "Follow"]
     ]
 
 recipesHeading =
