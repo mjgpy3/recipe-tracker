@@ -1,4 +1,4 @@
-module Component.AddRecipe exposing (update, Model, view, Msg(..))
+module Component.AddRecipe exposing (update, Model, view, Msg(..), empty)
 
 import Html exposing (button, div, text, header, h1, form, input, label, span, ul, li)
 import Html.Attributes exposing (class, attribute)
@@ -14,6 +14,10 @@ type alias RecipeName = String
 type Msg
   = SaveNewRecipe
   | ChangeNewRecipeName String
+  | ChangeServing String
+  | ChangePrepTime String
+  | ChangeCookTime String
+  | ChangeOverallTime String
   | AddEmpty ItemDiscriminator
   | ChangeItem ItemDiscriminator Int String
   | RemoveItem ItemDiscriminator Int
@@ -25,8 +29,23 @@ type ItemDiscriminator = IngredientItem | StepItem
 type alias NewRecipe = {
   name: RecipeName,
   ingredients: List (Maybe (Int, String)),
-  steps: List (Maybe (Int, String))
+  steps: List (Maybe (Int, String)),
+  serves: Maybe Int,
+  cookTime: Maybe Int,
+  prepTime: Maybe Int,
+  overallTime: Maybe Int
 }
+
+empty =
+  {
+    name="",
+    ingredients=[],
+    steps=[],
+    serves=Nothing,
+    cookTime=Nothing,
+    prepTime=Nothing,
+    overallTime=Nothing
+  }
 
 type alias Model = (User, NewRecipe)
 
@@ -42,6 +61,10 @@ encode body =
       List.map Tuple.second >>
       List.map Enc.string >>
       Enc.list
+    possibleInt name v =
+      case v of
+        Nothing -> []
+        Just count -> [(name, Enc.int count)]
   in
     Enc.object
       [ ("userName", Enc.string <| Tuple.first body.user)
@@ -50,7 +73,12 @@ encode body =
           [ ("name", Enc.string <| body.recipe.name)
           , ("ingredients", encodeItems body.recipe.ingredients)
           , ("steps", encodeItems body.recipe.steps)
-          ])
+          ]
+            ++ possibleInt "serves" body.recipe.serves
+            ++ possibleInt "cookTime" body.recipe.cookTime
+            ++ possibleInt "prepTime" body.recipe.prepTime
+            ++ possibleInt "overallTime" body.recipe.overallTime
+        )
       ]
 
 type alias PostRecipeResponse = {
@@ -96,6 +124,18 @@ update msg (user, recipe) =
     ChangeNewRecipeName newName ->
       ((user, { recipe | name=newName }), Cmd.none)
 
+    ChangeServing newServing ->
+      ((user, { recipe | serves=Result.toMaybe (String.toInt newServing) }), Cmd.none)
+
+    ChangeCookTime newCookTime ->
+      ((user, { recipe | cookTime=Result.toMaybe (String.toInt newCookTime) }), Cmd.none)
+
+    ChangePrepTime newPrepTime ->
+      ((user, { recipe | prepTime=Result.toMaybe (String.toInt newPrepTime) }), Cmd.none)
+
+    ChangeOverallTime newOverallTime ->
+      ((user, { recipe | overallTime=Result.toMaybe (String.toInt newOverallTime) }), Cmd.none)
+
     ChangeItem disc valueIndex newValue ->
       let
         replaceValue = Maybe.map (\(index, value) -> if index == valueIndex then (index, newValue) else (index, value))
@@ -135,7 +175,22 @@ view ((name, _), recipe) =
           [ div [class "input-row"]
               [ label [] [text "Recipe name"]
               , input [onInput ChangeNewRecipeName, attribute "type" "text", attribute "placeholder" "ex. Mom's famous mac'n cheese"] []
-              , div [] [text recipe.name]
+              ]
+          , div [class "input-row"]
+              [ label [] [text "Serves"]
+              , input [onInput ChangeServing, attribute "type" "number", attribute "placeholder" "minutes"] []
+              ]
+          , div [class "input-row"]
+              [ label [] [text "Cook Time"]
+              , input [onInput ChangeCookTime, attribute "type" "number", attribute "placeholder" "minutes"] []
+              ]
+          , div [class "input-row"]
+              [ label [] [text "Prep Time"]
+              , input [onInput ChangePrepTime, attribute "type" "number", attribute "placeholder" "minutes"] []
+              ]
+          , div [class "input-row"]
+              [ label [] [text "Overall Time"]
+              , input [onInput ChangeOverallTime, attribute "type" "number", attribute "placeholder" "minutes"] []
               ]
           , listEdit "Ingredients" "ex. 2 eggs" IngredientItem recipe.ingredients
           , listEdit "Steps" "ex. mix dry ingredients" StepItem recipe.steps

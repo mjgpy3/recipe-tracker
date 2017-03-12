@@ -1,7 +1,5 @@
 import Html exposing (Html)
 
-import User exposing (..)
-
 import Component.AddRecipe as AddRecipe
 import Component.Error as Error
 import Component.SelectRecipeToFollow as SelectRecipeToFollow
@@ -39,7 +37,7 @@ update msg model =
         (FindRecipeToFollow <| Tuple.first results, Cmd.map SelectRecipeToFollowMsg <| Tuple.second results)
 
     (SelectRecipeToFollowMsg SelectRecipeToFollow.AddRecipe, FindRecipeToFollow (SelectRecipeToFollow.Loaded user _)) ->
-      (AddRecipeFor (user, { name="", ingredients=[], steps=[] }), Cmd.none)
+      (AddRecipeFor (user, AddRecipe.empty), Cmd.none)
 
     (SelectRecipeToFollowMsg msg, FindRecipeToFollow model) ->
       let
@@ -57,7 +55,7 @@ update msg model =
         (AddRecipeFor <| Tuple.first results, Cmd.map AddRecipeMsg <| Tuple.second results)
 
     (WelcomeMsg Welcome.SelectAddRecipe, Welcome user) ->
-      (AddRecipeFor (user, { name="", ingredients=[], steps=[] }), Cmd.none)
+      (AddRecipeFor (user, AddRecipe.empty), Cmd.none)
 
     (ErrorOccured message, _) ->
       (Error message, Cmd.none)
