@@ -1,10 +1,12 @@
-module Component.Welcome exposing (view, Msg(..))
+module Component.Welcome exposing (view, Msg(..), Model)
 
 import Html exposing (button, div, text, header, h1)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 
 import User exposing (..)
+
+type alias Model = User
 
 type Msg
   = SelectAddRecipe

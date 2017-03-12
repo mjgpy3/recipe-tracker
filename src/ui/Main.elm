@@ -1,11 +1,11 @@
-import Html exposing (Html, div, text, header, h1, span, ul, li)
-import Html.Attributes exposing (class)
+import Html exposing (Html)
 
 import User exposing (..)
 
 import Component.AddRecipe as AddRecipe
-import Component.SelectUser as SelectUser
+import Component.Error as Error
 import Component.SelectRecipeToFollow as SelectRecipeToFollow
+import Component.SelectUser as SelectUser
 import Component.Welcome as Welcome
 
 main =
@@ -15,7 +15,7 @@ subscriptions model = Sub.none
 
 type Model
   = NoneYet
-  | Welcome User
+  | Welcome Welcome.Model
   | AddRecipeFor AddRecipe.Model
   | FindRecipeToFollow SelectRecipeToFollow.Model
   | Error String
@@ -74,21 +74,4 @@ view model =
     FindRecipeToFollow model -> Html.map SelectRecipeToFollowMsg <| SelectRecipeToFollow.view model
     AddRecipeFor model -> Html.map AddRecipeMsg <| AddRecipe.view model
 
-    Error message -> viewError message
-
-viewError message =
-  div []
-    [ header [class "bar bar-nav"]
-      [h1 [class "title"] [text "Whoops..."]]
-    , div [class "content content-padded"]
-      [
-        div [class "card"]
-          [ ul [class "table-view"]
-              [ li [class "table-view-cell"]
-                  [ span [class "icon icon-info"] []
-                  , text message
-                  ]
-              ]
-          ]
-      ]
-    ]
+    Error message -> Error.view message
