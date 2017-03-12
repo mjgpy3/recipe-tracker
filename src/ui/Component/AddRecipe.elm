@@ -122,7 +122,14 @@ mapItems disc recipe fn =
 handle response =
   case response of
     Ok _ -> RecipeSaved
-    Err _ -> ErrorWhileSaving "Failed to save. Please try again later."
+    Err (Http.BadStatus e) ->
+      case (e.status.code, Dec.decodeString decoder e.body) of
+        (400, Ok err) ->
+          ErrorWhileSaving err.message
+        _ ->
+          ErrorWhileSaving "Failed to save. Please try again later."
+    Err _ ->
+      ErrorWhileSaving "Failed to save. Please try again later."
 
 update msg (user, recipe, err) =
   case msg of

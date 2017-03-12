@@ -142,28 +142,46 @@ server.route({
   }
 });
 
+const recipeNames = () =>
+  request({
+    method: 'GET',
+    uri: projectionStateUrl('all-recipe-names'),
+    json: true
+  })
+  .then(R.defaultTo([]));
+
 server.route({
   method: 'POST',
   path: '/recipe',
   handler: (req, reply) => {
-    const event = {
-      eventId: uuid.v4(),
-      eventType: 'RecipeAdded',
-      data: req.payload
-    };
-    console.log(event);
-    produce(event, `Recipe-${event.data.recipe.name}`)
+    const recipeName = req.payload.recipe.name;
+
+    recipeNames()
       .then(
-        _ => {
-          console.log('Added');
-          reply({ message: 'Added' });
-        },
-        err => {
-          console.log('Error:', err);
-          reply({ message: 'An error occured' }).code(500);
-        }
+        R.ifElse(
+          R.contains(recipeName),
+          _ => reply({ message: `A reecipe named "${recipeName}" already exists.` }).code(400),
+          _ => {
+            const event = {
+              eventId: uuid.v4(),
+              eventType: 'RecipeAdded',
+              data: req.payload
+            };
+            console.log(event);
+            produce(event, `Recipe-${event.data.recipe.name}`)
+              .then(
+                _ => {
+                  console.log('Added');
+                  reply({ message: 'Added' });
+                },
+                err => {
+                  console.log('Error:', err);
+                  reply({ message: 'An error occured' }).code(500);
+                }
+              );
+          }
+        )
       );
-    ;
   }
 });
 
@@ -171,15 +189,9 @@ server.route({
   method: 'GET',
   path: '/recipes',
   handler: (_, reply) => {
-    request({
-      method: 'GET',
-      uri: projectionStateUrl('all-recipe-names'),
-      json: true
-    })
+    recipeNames()
       .then(
-        response => {
-          reply(response || []);
-        },
+        reply,
         err => {
           console.log('Error:', err);
           if (err.statusCode === 404) {
