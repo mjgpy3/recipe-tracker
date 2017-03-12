@@ -54,6 +54,12 @@ update msg model =
     (AddRecipeMsg msg, AddRecipeFor model) ->
       disp AddRecipeFor AddRecipeMsg <| AddRecipe.update msg model
 
+    (FollowRecipeMsg FollowRecipe.ErrorWhileLoading, _) ->
+      (Error "An error occured while loading the recipe", Cmd.none)
+
+    (FollowRecipeMsg msg, FollowRecipe model) ->
+      disp FollowRecipe FollowRecipeMsg <| FollowRecipe.update msg model
+
     (WelcomeMsg Welcome.SelectAddRecipe, Welcome user) ->
       (AddRecipeFor (user, AddRecipe.empty), Cmd.none)
 

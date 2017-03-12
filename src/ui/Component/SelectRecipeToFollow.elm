@@ -66,7 +66,7 @@ view model =
         div [class "card"]
           [ ul [class "table-view"]
               (case model of
-                Unloaded -> [li [class "table-view-cell"] [h2 [] [text "Loading"]]]
+                Unloaded -> [li [class "table-view-cell"] [text "Loading"]]
                 Loaded user recipes -> withEmptyMessage <| recipesHeading::List.map followRecipeButton recipes)
           ]
       ]
