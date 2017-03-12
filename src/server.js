@@ -9,6 +9,8 @@ const fs = require('fs');
 const esUrl = 'http://localhost:2113/';
 const streamUrl = streamName => `${esUrl}streams/${streamName}`;
 const projectionStateUrl = projectionName => `${esUrl}projection/${projectionName}/state`;
+const partitionedProjectionStateUrl =
+  (partition, projectionName) => `${projectionStateUrl(projectionName)}?partition=${partition}`;
 
 const allProjections = () =>
   request({
@@ -136,6 +138,28 @@ server.route({
           else {
             reply({ message: 'An error occured' }).code(500);
           }
+        }
+      );
+    ;
+  }
+});
+
+server.route({
+  method: 'GET',
+  path: '/recipe/{name}',
+  handler: (req, reply) => {
+    request({
+      method: 'GET',
+      uri: partitionedProjectionStateUrl(`Recipe-${req.params.name}`, 'recipe'),
+      json: true
+    })
+      .then(
+        response => {
+          reply(response.recipe);
+        },
+        err => {
+          console.log('Error:', err);
+          reply({ message: 'An error occured' }).code(500);
         }
       );
     ;
