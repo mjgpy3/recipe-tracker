@@ -1,6 +1,6 @@
 module Component.Welcome exposing (view, Msg(..), Model)
 
-import Html exposing (button, div, text, header, h1)
+import Html exposing (button, div, text, header, h1, span)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 
@@ -14,14 +14,17 @@ type Msg
 
 roleActions (name, role) =
   let
-    actionButton (label, action) =
-      button [class "btn btn-primary btn-block", onClick action] [text label]
+    actionButton (icon, label, action) =
+      button [class "btn btn-primary btn-block", onClick action]
+        [ span [class ("icon icon-" ++ icon)] []
+        , text (" " ++ label)
+        ]
   in
     case role of
       Chef ->
         List.map actionButton
-          [ ("Follow Recipe", SelectFollowRecipe)
-          , ("Add Recipe", SelectAddRecipe)
+          [ ("search", "Find A Recipe", SelectFollowRecipe)
+          , ("plus", "Add Recipe", SelectAddRecipe)
           ]
 
       Diner ->
