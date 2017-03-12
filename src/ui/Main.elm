@@ -1,11 +1,11 @@
-import Html exposing (Html, button, div, text, header, h1, h2, form, input, label, span, ul, li)
-import Html.Attributes exposing (class, attribute)
-import Html.Events exposing (onClick, onInput)
-import Http
-import Json.Decode as Dec
+import Html exposing (Html, div, text, header, h1, span, ul, li)
+import Html.Attributes exposing (class)
+
 import User exposing (..)
+
 import Component.AddRecipe as AddRecipe
 import Component.SelectUser as SelectUser
+import Component.SelectRecipeToFollow as SelectRecipeToFollow
 import Component.Welcome as Welcome
 
 main =
@@ -15,21 +15,17 @@ subscriptions model = Sub.none
 
 type Model
   = NoneYet
-  | Error String
   | Welcome User
   | AddRecipeFor AddRecipe.Model
-  | FindRecipeToFollow User (List String)
+  | FindRecipeToFollow SelectRecipeToFollow.Model
+  | Error String
 
 type Msg
   = SelectUserMsg SelectUser.Msg
   | WelcomeMsg Welcome.Msg
   | AddRecipeMsg AddRecipe.Msg
+  | SelectRecipeToFollowMsg SelectRecipeToFollow.Msg
   | ErrorOccured String
-  | SelectFollowRecipeFrom User (List String)
-
-getRecipeNames : Http.Request (List String)
-getRecipeNames =
-  Http.get "http://localhost:3000/recipes" (Dec.list Dec.string)
 
 update msg model =
   case (msg, model) of
@@ -38,15 +34,18 @@ update msg model =
 
     (WelcomeMsg Welcome.SelectFollowRecipe, Welcome user) ->
       let
-        handle response =
-          case response of
-            Ok recipeNames -> SelectFollowRecipeFrom user recipeNames
-            Err _ -> ErrorOccured "Sorry! Something broke while I was finding recipes."
+        results = SelectRecipeToFollow.load user
       in
-      (FindRecipeToFollow user [], Http.send handle getRecipeNames)
+        (FindRecipeToFollow <| Tuple.first results, Cmd.map SelectRecipeToFollowMsg <| Tuple.second results)
 
-    (SelectFollowRecipeFrom user recipeNames, _) ->
-      (FindRecipeToFollow user recipeNames, Cmd.none)
+    (SelectRecipeToFollowMsg SelectRecipeToFollow.AddRecipe, FindRecipeToFollow (SelectRecipeToFollow.Loaded user _)) ->
+      (AddRecipeFor (user, { name="", ingredients=[], steps=[] }), Cmd.none)
+
+    (SelectRecipeToFollowMsg msg, FindRecipeToFollow model) ->
+      let
+        results = SelectRecipeToFollow.update msg model
+      in
+        (FindRecipeToFollow <| Tuple.first results, Cmd.map SelectRecipeToFollowMsg <| Tuple.second results)
 
     (AddRecipeMsg AddRecipe.RecipeSaved, AddRecipeFor (user, _)) ->
       (Welcome user, Cmd.none)
@@ -58,9 +57,6 @@ update msg model =
         (AddRecipeFor <| Tuple.first results, Cmd.map AddRecipeMsg <| Tuple.second results)
 
     (WelcomeMsg Welcome.SelectAddRecipe, Welcome user) ->
-      (AddRecipeFor (user, { name="", ingredients=[], steps=[] }), Cmd.none)
-
-    (WelcomeMsg Welcome.SelectAddRecipe, FindRecipeToFollow user _) ->
       (AddRecipeFor (user, { name="", ingredients=[], steps=[] }), Cmd.none)
 
     (ErrorOccured message, _) ->
@@ -75,7 +71,7 @@ view model =
 
     Welcome user -> Html.map WelcomeMsg <| Welcome.view user
 
-    FindRecipeToFollow user recipes -> viewFindRecipeToFollow user recipes
+    FindRecipeToFollow model -> Html.map SelectRecipeToFollowMsg <| SelectRecipeToFollow.view model
     AddRecipeFor model -> Html.map AddRecipeMsg <| AddRecipe.view model
 
     Error message -> viewError message
@@ -93,39 +89,6 @@ viewError message =
                   , text message
                   ]
               ]
-          ]
-      ]
-    ]
-
-followRecipeButton recipe =
-  li [class "table-view-cell"]
-    [ text recipe
-    , button [class "btn", attribute "type" "button"] [text "Follow"]
-    ]
-
-recipiesHeading =
-  li [class "table-view-cell"] [h2 [] [text "Recipes"]]
-
-withEmptyMessage rows =
-  case rows of
-    [header] ->
-      header::[
-        li [class "table-view-cell"]
-          [ text "It looks like you don't have any recipes yet!"
-          , button [class "btn btn-primary", onClick (WelcomeMsg Welcome.SelectAddRecipe)] [text "Add One"]
-          ]
-      ]
-    all -> all
-
-viewFindRecipeToFollow user recipes =
-  div []
-    [ header [class "bar bar-nav"]
-      [h1 [class "title"] [text "Find Recipe to Follow"]]
-    , div [class "content content-padded"]
-      [
-        div [class "card"]
-          [ ul [class "table-view"]
-              <| withEmptyMessage <| recipiesHeading::List.map followRecipeButton recipes
           ]
       ]
     ]
