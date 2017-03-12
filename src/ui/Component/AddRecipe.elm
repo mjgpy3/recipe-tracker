@@ -163,7 +163,7 @@ update msg (user, recipe, err) =
       ((user, recipe, Just message), Cmd.none)
 
     SaveNewRecipe ->
-      case recipe.name of
+      case String.trim recipe.name of
         "" ->
           ((user, recipe, Just "A recipe name must be given."), Cmd.none)
         _ ->

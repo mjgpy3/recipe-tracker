@@ -68,10 +68,10 @@ decoder =
     (field "name" string)
     (field "ingredients" (list string))
     (field "steps" (list string))
-    (field "serves" (maybe int))
-    (field "cookTime" (maybe int))
-    (field "prepTime" (maybe int))
-    (field "overallTime" (maybe int))
+    (maybe (field "serves" int))
+    (maybe (field "cookTime" int))
+    (maybe (field "prepTime" int))
+    (maybe (field "overallTime" int))
 
 getRecipeNamed : String -> Http.Request Recipe
 getRecipeNamed name =
@@ -80,7 +80,7 @@ getRecipeNamed name =
 handleRecipeLoaded user response =
   case response of
     Ok recipe -> Loaded user recipe
-    Err _ -> ErrorWhileLoading
+    Err e -> Debug.log (toString e) ErrorWhileLoading
 
 load user recipeName =
   (Loading user recipeName, Http.send (handleRecipeLoaded user) <| getRecipeNamed recipeName)
