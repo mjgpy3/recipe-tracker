@@ -178,7 +178,7 @@ view ((name, _), recipe) =
               ]
           , div [class "input-row"]
               [ label [] [text "Serves"]
-              , input [onInput ChangeServing, attribute "type" "number", attribute "placeholder" "minutes"] []
+              , input [onInput ChangeServing, attribute "type" "number", attribute "placeholder" "number of people"] []
               ]
           , div [class "input-row"]
               [ label [] [text "Cook Time"]
