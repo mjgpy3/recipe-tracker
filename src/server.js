@@ -66,10 +66,13 @@ const enableByCategoryProjection = () =>
   );
 
 const bootstrap = () =>
-  Promise.all([
-    enableByCategoryProjection()
-  , createProjection('all-recipe-names')
-  ]);
+  Promise.all(
+    [
+      enableByCategoryProjection()
+    , createProjection('all-recipe-names')
+    , createProjection('recipe')
+    ]
+  );
 
 bootstrap();
 
