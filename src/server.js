@@ -72,6 +72,7 @@ const bootstrap = () =>
     [
       enableByCategoryProjection()
     , createProjection('all-recipe-names')
+    , createProjection('all-recipe-summaries')
     , createProjection('recipe')
     ]
   );
@@ -150,6 +151,14 @@ const recipeNames = () =>
   })
   .then(R.defaultTo([]));
 
+const recipeSummaries = () =>
+  request({
+    method: 'GET',
+    uri: projectionStateUrl('all-recipe-summaries'),
+    json: true
+  })
+  .then(R.defaultTo([]));
+
 server.route({
   method: 'POST',
   path: '/recipe',
@@ -189,7 +198,7 @@ server.route({
   method: 'GET',
   path: '/recipes',
   handler: (_, reply) => {
-    recipeNames()
+    recipeSummaries()
       .then(
         reply,
         err => {

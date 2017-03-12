@@ -9,22 +9,32 @@ import User exposing (..)
 
 type Model
   = Unloaded
-  | Loaded User (List String)
+  | Loaded User (List Summary)
+
+type alias Summary = { name: String, overallTime: String }
+
+makeSummary name time = { name=name, overallTime=time }
 
 type Msg
   = AddRecipe
-  | RecipesLoaded User (List String)
+  | RecipesLoaded User (List Summary)
   | FollowRecipeNamed User String
   | ErrorWhileLoading
 
-getRecipeNames : Http.Request (List String)
-getRecipeNames =
-  Http.get "http://localhost:3000/recipes" (Dec.list Dec.string)
+decodeSummary =
+  Dec.map2
+    makeSummary
+    (Dec.field "name" Dec.string)
+    (Dec.field "overallTime" Dec.string)
 
-followRecipeButton user name =
+getRecipeSummaries : Http.Request (List Summary)
+getRecipeSummaries =
+  Http.get "http://localhost:3000/recipes" (Dec.list decodeSummary)
+
+followRecipeButton user recipe =
   li [class "table-view-cell"]
-    [ text name
-    , button [class "btn", attribute "type" "button", onClick (FollowRecipeNamed user name)] [text "Follow"]
+    [ text (recipe.name ++ " (" ++ recipe.overallTime ++ ")")
+    , button [class "btn", attribute "type" "button", onClick (FollowRecipeNamed user recipe.name)] [text "Follow"]
     ]
 
 recipesHeading =
@@ -45,10 +55,10 @@ load user =
   let
     handle response =
       case response of
-        Ok recipeNames -> RecipesLoaded user recipeNames
+        Ok recipes -> RecipesLoaded user recipes
         Err _ -> ErrorWhileLoading
   in
-    (Unloaded, Http.send handle getRecipeNames)
+    (Unloaded, Http.send handle getRecipeSummaries)
   
 update msg model =
   case msg of
