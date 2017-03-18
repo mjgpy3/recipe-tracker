@@ -6,6 +6,7 @@ import Html.Events exposing (onClick)
 import Http
 import Json.Decode as Dec
 import User exposing (..)
+import Config exposing (route)
 
 type Model
   = Unloaded
@@ -29,7 +30,7 @@ decodeSummary =
 
 getRecipeSummaries : Http.Request (List Summary)
 getRecipeSummaries =
-  Http.get "http://localhost:3000/recipes" (Dec.list decodeSummary)
+  Http.get (route "/recipes") (Dec.list decodeSummary)
 
 followRecipeButton user recipe =
   li [class "table-view-cell"]

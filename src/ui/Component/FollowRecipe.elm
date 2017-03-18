@@ -8,6 +8,7 @@ import Json.Decode exposing (field, map7, list, string, maybe, int)
 import Json.Decode as Dec
 import Json.Encode exposing (null)
 import Fp exposing (..)
+import Config exposing (route)
 import User exposing (..)
 
 type Items = Ingredients | Steps
@@ -38,14 +39,14 @@ any = Dec.map (const ()) (maybe int)
 postRecipeCooked : String -> Http.Request ()
 postRecipeCooked recipeName =
   Http.post
-    ("http://localhost:3000/recipe/" ++ recipeName ++ "/cooked")
+    (route <| "/recipe/" ++ recipeName ++ "/cooked")
     (Http.jsonBody null)
     any
 
 postStartedToFollow : String -> Http.Request ()
 postStartedToFollow recipeName =
   Http.post
-    ("http://localhost:3000/recipe/" ++ recipeName ++ "/follow")
+    (route <| "/recipe/" ++ recipeName ++ "/follow")
     (Http.jsonBody null)
     any
 
@@ -75,7 +76,7 @@ decoder =
 
 getRecipeNamed : String -> Http.Request Recipe
 getRecipeNamed name =
-  Http.get ("http://localhost:3000/recipe/" ++ name) decoder
+  Http.get (route <| "/recipe/" ++ name) decoder
 
 handleRecipeLoaded user response =
   case response of

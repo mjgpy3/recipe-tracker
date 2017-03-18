@@ -6,7 +6,7 @@ const request = require('request-promise');
 const R = require('ramda');
 const fs = require('fs');
 
-const esUrl = 'http://localhost:2113/';
+const esUrl = process.env.EVENTSTORE_URL || 'http://localhost:2113/';
 const streamUrl = streamName => `${esUrl}streams/${streamName}`;
 const projectionStateUrl = projectionName => `${esUrl}projection/${projectionName}/state`;
 const partitionedProjectionStateUrl =
@@ -31,7 +31,7 @@ const createProjection = name =>
             url: `${esUrl}projections/continuous?name=${name}&type=js&enabled=true&emit=false&trackemittedstreams=false`,
             method: 'POST',
             body: fs
-              .readFileSync(`projections/${name}.js`)
+              .readFileSync(`${__dirname}/projections/${name}.js`)
               .toString('utf8'),
             headers: {
               Authorization: 'Basic YWRtaW46Y2hhbmdlaXQ=',
@@ -77,7 +77,7 @@ const bootstrap = () =>
     ]
   );
 
-bootstrap();
+setTimeout(bootstrap, 5000);
 
 const produce = (event, stream) =>
   request({
@@ -91,7 +91,11 @@ const produce = (event, stream) =>
   });
 
 const server = new Hapi.Server();
-server.connection({ port: 3000, host: 'localhost', routes: { cors: true } });
+server.connection({
+  port: process.env.PORT || 3000,
+  host: process.env.HOST || 'localhost',
+  routes: { cors: true }
+});
 
 server.route({
   method: 'POST',

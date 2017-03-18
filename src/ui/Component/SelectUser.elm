@@ -5,6 +5,7 @@ import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 
 import User exposing (..)
+import Config exposing (..)
 
 type Msg
   = SelectUser User

@@ -7,6 +7,7 @@ import Http
 import Json.Decode as Dec
 import Json.Encode as Enc
 import User exposing (..)
+import Config exposing (route)
 import Fp exposing (..)
 
 type alias RecipeName = String
@@ -89,7 +90,7 @@ type alias PostRecipeBody = { user: User, recipe: NewRecipe }
 
 postRecipe : PostRecipeBody -> Http.Request PostRecipeResponse
 postRecipe body =
-  Http.post "http://localhost:3000/recipe" (Http.jsonBody <| encode body) decoder
+  Http.post (route "/recipe") (Http.jsonBody <| encode body) decoder
 
 listEdit title example discriminator items =
   let
