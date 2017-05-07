@@ -201,7 +201,7 @@ view ((name, _), recipe, err) =
     , div [class "content content-padded"]
       [ form [class "input-group"]
           [ div [class "input-row"]
-              [ label [] [text "Recipe name"]
+              [ label [] [text "Name"]
               , input [onInput ChangeNewRecipeName, attribute "type" "text", attribute "placeholder" "ex. Mom's famous mac'n cheese"] []
               ]
           , div [class "input-row"]
@@ -217,7 +217,7 @@ view ((name, _), recipe, err) =
               , input [onInput ChangePrepTime, attribute "type" "number", attribute "placeholder" "minutes"] []
               ]
           , div [class "input-row"]
-              [ label [] [text "Overall Time"]
+              [ label [] [text "Total Time"]
               , input [onInput ChangeOverallTime, attribute "type" "number", attribute "placeholder" "minutes"] []
               ]
           , listEdit "Ingredients" "ex. 2 eggs" IngredientItem recipe.ingredients
